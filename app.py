@@ -42,45 +42,6 @@ def get_color_square(rgb):
 
 # --- 3. Streamlit 页面配置 ---
 st.set_page_config(page_title="MARD 221 拼豆专家系统", layout="wide")
-# --- 注入精准 CSS：保留左上角，干掉右上角和右下角垃圾 UI ---
-st.markdown("""
-    <style>
-    /* 1. 定位右上角的按钮容器（Fork, GitHub, Menu），将其隐藏 */
-    [data-testid="stHeaderActionElements"] {
-        display: none !important;
-    }
-    
-    /* 2. 定位右上角可能存在的额外菜单按钮，将其隐藏 */
-    header[data-testid="stHeader"] > div:nth-child(2) {
-        display: none !important;
-    }
-
-    /* 3. 彻底隐藏 Streamlit 默认页脚（Made with Streamlit） */
-    footer {
-        visibility: hidden !important;
-        height: 0px !important;
-    }
-
-    /* 4. 强力抹除右下角悬浮的紫色头像、红色部署状态等 Viewer Badge */
-    div[class^="st-emotion-cache-"], 
-    div[data-testid="stStatusWidget"], 
-    .stDeployButton {
-        /* 我们只针对定位在右下角、且 z-index 极高的悬浮物 */
-    }
-    
-    /* 精准打击手机端右下角的垃圾悬浮物 (通常 class 包含 viewerBadge) */
-    div[class*="viewerBadge"], 
-    div[class*="StatusWidget"] {
-        display: none !important;
-        vertical-align: hidden !important;
-    }
-    
-    /* 极致保险：针对 Streamlit 云端强制塞入的底部交互栏 */
-    iframe[title="Streamlit app status"] {
-        display: none !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
 st.title("🎨 MARD 221 拼豆图纸专家系统")
 
 # 🔴 页面状态池
