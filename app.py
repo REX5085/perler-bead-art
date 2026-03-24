@@ -42,7 +42,32 @@ def get_color_square(rgb):
 
 # --- 3. Streamlit 页面配置 ---
 st.set_page_config(page_title="MARD 221 拼豆专家系统", layout="wide")
-st.title("🎨 MARD 221 拼豆图纸专家系统")
+
+# 👇 修复版 CSS：精准拔掉皇冠和菜单，保留侧边栏唤出箭头！
+hide_streamlit_style = """
+    <style>
+    /* 1. 隐藏右上角的 Deploy 部署按钮和三条杠菜单 */
+    .stAppDeployButton {display: none !important;}
+    #MainMenu {visibility: hidden !important;}
+    
+    /* 2. 隐藏底部 Made with Streamlit 页脚 */
+    footer {visibility: hidden !important;}
+
+    /* 3. 抹除右下角最顽固的头像和红底皇冠 */
+    div[data-testid="stStatusWidget"] {display: none !important;}
+    
+    /* 4. 针对手机端可能出现的特殊悬浮角标 */
+    #viewer-toolbar-profile {display: none !important;}
+    .viewerBadge_container__16S92 {display: none !important;}
+    
+    /* 5. 压缩顶部空白，让页面更像一个App */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+    }
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # 🔴 页面状态池
 if "modified_pixels" not in st.session_state:
