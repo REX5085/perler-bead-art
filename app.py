@@ -43,25 +43,16 @@ def get_color_square(rgb):
 # --- 3. Streamlit 页面配置 ---
 st.set_page_config(page_title="MARD 221 拼豆专家系统", layout="wide")
 
-# 👇 终极纯净模式：利用 CSS 强制抹除所有官方水印、头像、皇冠、页脚
+# --- 3. Streamlit 页面配置 ---
+st.set_page_config(page_title="MARD 221 拼豆专家系统", layout="wide")
+
+# 👇 新增：注入 CSS 隐藏页脚和右上角 GitHub 菜单
 hide_streamlit_style = """
     <style>
-    /* 1. 隐藏顶部白条、右上角三条杠菜单和 GitHub 图标 */
-    header {visibility: hidden !important;}
-    
-    /* 2. 隐藏底部官方 "Made with Streamlit" 页脚 */
-    footer {visibility: hidden !important;}
-    
-    /* 3. 隐藏右上角蓝色的 "Deploy" 部署按钮 */
-    .stDeployButton {display: none !important;}
-    
-    /* 4. 隐藏右下角悬浮的官方头像、红底皇冠以及链接（针对手机端和电脑端） */
-    div[data-testid="stStatusWidget"] {visibility: hidden !important; display: none !important;}
-    #viewer-toolbar-profile {display: none !important;}
-    .viewerBadge_container__16S92 {display: none !important;}
-    
-    /* 5. 消除顶部空白间距，让页面更紧凑 */
-    .block-container {padding-top: 1rem !important; padding-bottom: 1rem !important;}
+    #MainMenu {visibility: hidden;} /* 隐藏右上角三条杠菜单 */
+    header {visibility: hidden;}    /* 隐藏顶部白条和 GitHub 图标 */
+    footer {visibility: hidden;}    /* 隐藏底部 Made with Streamlit */
+    .stDeployButton {display:none;} /* 隐藏右上角 Deploy 部署按钮 */
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
