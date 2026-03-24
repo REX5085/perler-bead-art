@@ -43,27 +43,25 @@ def get_color_square(rgb):
 # --- 3. Streamlit 页面配置 ---
 st.set_page_config(page_title="MARD 221 拼豆专家系统", layout="wide")
 
-# 👇 修复版 CSS：精准拔掉皇冠和菜单，保留侧边栏唤出箭头！
+# 👇 重新校准的 CSS：放过手机端侧边栏按钮，仅拔除右下角水印和右上角多余按钮
 hide_streamlit_style = """
     <style>
-    /* 1. 隐藏右上角的 Deploy 部署按钮和三条杠菜单 */
+    /* 1. 仅隐藏右上角的 Deploy 部署按钮和主菜单，保留手机侧边栏箭头 */
     .stAppDeployButton {display: none !important;}
     #MainMenu {visibility: hidden !important;}
     
-    /* 2. 隐藏底部 Made with Streamlit 页脚 */
+    /* 2. 隐藏底部页脚 (Made with Streamlit) */
     footer {visibility: hidden !important;}
 
-    /* 3. 抹除右下角最顽固的头像和红底皇冠 */
+    /* 3. 彻底抹除手机端右下角最顽固的红底皇冠和头像容器 */
     div[data-testid="stStatusWidget"] {display: none !important;}
-    
-    /* 4. 针对手机端可能出现的特殊悬浮角标 */
-    #viewer-toolbar-profile {display: none !important;}
     .viewerBadge_container__16S92 {display: none !important;}
+    #viewer-toolbar-profile {display: none !important;}
     
-    /* 5. 压缩顶部空白，让页面更像一个App */
+    /* 4. 恢复正常的顶部间距，不让标题顶死在屏幕最上面 */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
+        padding-top: 3.5rem !important;
+        padding-bottom: 1rem !important;
     }
     </style>
 """
