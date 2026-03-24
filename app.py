@@ -42,6 +42,18 @@ def get_color_square(rgb):
 
 # --- 3. Streamlit 页面配置 ---
 st.set_page_config(page_title="MARD 221 拼豆专家系统", layout="wide")
+
+# 👇 新增：注入 CSS 隐藏页脚和右上角 GitHub 菜单
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;} /* 隐藏右上角三条杠菜单 */
+    header {visibility: hidden;}    /* 隐藏顶部白条和 GitHub 图标 */
+    footer {visibility: hidden;}    /* 隐藏底部 Made with Streamlit */
+    .stDeployButton {display:none;} /* 隐藏右上角 Deploy 部署按钮 */
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 st.title("🎨 MARD 221 拼豆图纸专家系统")
 
 # 🔴 页面状态池
