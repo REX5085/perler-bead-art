@@ -50,21 +50,25 @@ if "modified_pixels" not in st.session_state:
 
 with st.sidebar:
     st.header("⚙️ 核心参数设置")
-    uploaded_file = st.file_uploader("1. 上传图片", type=["jpg", "png", "jpeg"])
+    uploaded_file = st.file_uploader("1. 上传图片", type=["jpg", "png", "jpeg"], help="支持常用JPG、PNG格式。上传后系统会自动开始进行拼豆化转换。")
     st.divider()
-    st.subheader("2. 选择作品规格")
-    preset = st.radio("快速选择常用规格：", ["自定义", "钥匙扣 (29px)", "摆件 (50px)", "挂画 (80px)", "精细模型 (120px)"], index=2)
+    
+    # 🌟 将大段文字说明，写进了 help="弹出提示" 中 🌟
+    st.subheader("2. 作品规格")
+    preset = st.radio("快速选择规格：", ["自定义", "钥匙扣 (29px)", "摆件 (50px)", "挂画 (80px)", "精细模型 (120px)"], index=2, help="规格决定了最后拼豆板的物理大小。颗粒数越多，细节越丰富，但也越耗费精力和材料。")
     preset_map = {"钥匙扣 (29px)": 29, "摆件 (50px)": 50, "挂画 (80px)": 80, "精细模型 (120px)": 120}
     default_w = preset_map.get(preset, 50)
-    target_w = st.slider("目标宽度 (像素/颗数)", 10, 200, default_w)
+    target_w = st.slider("目标宽度 (像素/颗数)", 10, 200, default_w, help="横向一共由多少颗拼豆组成。高度会按图片原比例自动计算。")
     st.divider()
+    
     st.subheader("3. 色彩处理")
-    color_limit = st.slider("色彩精简度 (色数)", 2, 60, 25)
-    saturation = st.slider("色彩饱和度增强", 0.5, 2.0, 1.2)
+    color_limit = st.slider("色彩精简度 (色数)", 2, 60, 25, help="将原图合并压缩成多少种主色调。现实色彩千千万，但实物拼豆颜色有限。数字越小画面越简洁、越容易采购豆子。")
+    saturation = st.slider("色彩饱和度增强", 0.5, 2.0, 1.2, help="拼豆实物颜色通常比电脑屏幕鲜艳。建议稍微拉高（>1.0）使成品更生动好看。")
     st.divider()
+    
     st.subheader("4. 视图辅助")
-    show_grid = st.checkbox("显示辅助网格", value=True)
-    show_labels = st.checkbox("显示色号标注", value=False)
+    show_grid = st.checkbox("显示辅助网格", value=True, help="在画布上每隔1颗和5颗渲染灰线。")
+    show_labels = st.checkbox("显示色号标注", value=False, help="直接在预览图的豆子上写上对应的色号。小尺寸图纸建议开启。")
 
 # --- 4. 图像处理与渲染 ---
 if uploaded_file is not None:
@@ -105,7 +109,6 @@ if uploaded_file is not None:
                     text_color = (0,0,0) if brightness > 128 else (255,255,255)
                     draw.text((x * scale + 2, y * scale + 2), mid, fill=text_color, font=font)
         if show_grid:
-            # 修正后的网格线绘制逻辑
             for x in range(0, res.width + 1, scale):
                 width = 2 if (x//scale) % 5 == 0 else 1
                 draw.line([(x, 0), (x, res.height)], fill=(120,120,120), width=width)
@@ -130,14 +133,13 @@ if uploaded_file is not None:
         st.subheader("🖼️ 拼豆图纸预览")
         st.image(res, use_container_width=True)
         
-        # --- 📍 像素级切片编辑工具 📍 ---
         st.divider()
         with st.expander("🛠️ 展开/收起 像素级色彩微调工具"):
             st.subheader("🎨 局部放大寻点微调器")
             col_slice1, col_slice2, col_slice3 = st.columns([1.2, 1.2, 1.2])
             with col_slice1: active_y = st.slider("🔍 定位行数 (Y 轴)", 0, target_h - 1, 0)
             with col_slice2: active_x = st.slider(f"🔍 定位列数 (X 轴)", 0, target_w - 1, 0)
-            with col_slice3: view_range = st.slider("👀 局部寻位视野半径", 1, 15, 3)
+            with col_slice3: view_range = st.slider("👀 局部寻位视野半径", 1, 15, 3, help="控制目标周围看多少颗豆子。默认看周围各3颗豆子。")
 
             start_x, end_x = max(0, active_x - view_range), min(target_w - 1, active_x + view_range)
             start_y, end_y = max(0, active_y - view_range), min(target_h - 1, active_y + view_range)
@@ -178,7 +180,7 @@ if uploaded_file is not None:
         
         st.divider()
         
-        # --- 🚀 核心修改：内存级导出功能（支持手机下载） ---
+        # --- 🚀 内存级导出功能（支持手机直接下载到相册/系统） ---
         list_height = 80 + (len(beads_data) // 4 + 1) * 40
         final_export = Image.new("RGB", (res.width, res.height + list_height), (255, 255, 255))
         final_export.paste(res, (0, 0))
@@ -194,18 +196,15 @@ if uploaded_file is not None:
             draw_ex.rectangle([x_pos, y_pos, x_pos + 15, y_pos + 15], fill=item['rgb'], outline=(100,100,100))
             draw_ex.text((x_pos + 25, y_pos), f"{item['色号']}: {item['数量 (颗)']} pcs", fill=(0,0,0), font=font_ex)
         
-        # 将图片保存到内存缓冲区
         img_buffer = io.BytesIO()
         final_export.save(img_buffer, format="PNG")
         img_bytes = img_buffer.getvalue()
 
-        # 下载按钮（手机端点击会触发系统下载提示）
         st.download_button(
             label="🚀 点击这里下载完整资料图（带清单）",
             data=img_bytes,
             file_name=f"Beads_Pattern_{datetime.now().strftime('%m%d_%H%M')}.png",
-            mime="image/png",
-            help="点击后浏览器会请求保存图片，支持手机相册和电脑本地。"
+            mime="image/png"
         )
         
     with col2:
