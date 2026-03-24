@@ -68,3 +68,161 @@ with st.sidebar:
 
 # --- 4. 图像处理与渲染 ---
 if uploaded_file is not None:
+    img_orig = Image.open(uploaded_file).convert('RGB')
+    img = ImageEnhance.Color(img_orig).enhance(saturation)
+    w, h = img.size
+    target_h = int(target_w * (h / w))
+    img_small = img.resize((target_w, target_h), resample=Image.LANCZOS)
+    img_quant = img_small.quantize(colors=color_limit, method=Image.MAXCOVERAGE).convert('RGB')
+    px = img_quant.load()
+    inventory = {}
+    label_map = {} 
+    
+    for y in range(target_h):
+        for x in range(target_w):
+            if (x, y) in st.session_state.modified_pixels:
+                mid = st.session_state.modified_pixels[(x, y)]
+                mrgb = MARD_221[mid]
+            else:
+                mid, mrgb = find_best_mard(px[x, y])
+            px[x, y] = mrgb
+            inventory[mid] = inventory.get(mid, 0) + 1
+            label_map[(x, y)] = mid
+            
+    scale = 20 
+    res = img_quant.resize((target_w * scale, target_h * scale), resample=Image.NEAREST)
+    draw = ImageDraw.Draw(res)
+    
+    if show_grid or show_labels:
+        try: font = ImageFont.load_default()
+        except: font = None
+        for y in range(target_h):
+            for x in range(target_w):
+                if show_labels:
+                    mid = label_map[(x, y)]
+                    bg_rgb = px[x, y]
+                    brightness = sum(bg_rgb) / 3
+                    text_color = (0,0,0) if brightness > 128 else (255,255,255)
+                    draw.text((x * scale + 2, y * scale + 2), mid, fill=text_color, font=font)
+        if show_grid:
+            # 修正后的网格线绘制逻辑
+            for x in range(0, res.width + 1, scale):
+                width = 2 if (x//scale) % 5 == 0 else 1
+                draw.line([(x, 0), (x, res.height)], fill=(120,120,120), width=width)
+            for y in range(0, res.height + 1, scale):
+                width = 2 if (y//scale) % 5 == 0 else 1
+                draw.line([(0, y), (res.width, y)], fill=(120,120,120), width=width)
+
+    # --- 整理清单数据 ---
+    beads_data = []
+    for mid in sorted(inventory, key=inventory.get, reverse=True):
+        rgb = MARD_221[mid]
+        beads_data.append({
+            "预览": get_color_square(rgb),
+            "色号": mid,
+            "数量 (颗)": inventory[mid],
+            "rgb": rgb
+        })
+    df = pd.DataFrame(beads_data)
+
+    col1, col2 = st.columns([2.5, 1])
+    with col1:
+        st.subheader("🖼️ 拼豆图纸预览")
+        st.image(res, use_container_width=True)
+        
+        # --- 📍 像素级切片编辑工具 📍 ---
+        st.divider()
+        with st.expander("🛠️ 展开/收起 像素级色彩微调工具"):
+            st.subheader("🎨 局部放大寻点微调器")
+            col_slice1, col_slice2, col_slice3 = st.columns([1.2, 1.2, 1.2])
+            with col_slice1: active_y = st.slider("🔍 定位行数 (Y 轴)", 0, target_h - 1, 0)
+            with col_slice2: active_x = st.slider(f"🔍 定位列数 (X 轴)", 0, target_w - 1, 0)
+            with col_slice3: view_range = st.slider("👀 局部寻位视野半径", 1, 15, 3)
+
+            start_x, end_x = max(0, active_x - view_range), min(target_w - 1, active_x + view_range)
+            start_y, end_y = max(0, active_y - view_range), min(target_h - 1, active_y + view_range)
+            w_box, h_box = end_x - start_x + 1, end_y - start_y + 1
+            
+            st.markdown(f"**👁️ 锁定坐标附近范围排布 ($X={active_x}, Y={active_y}$)：**")
+            box_img = Image.new("RGB", (w_box * 30, h_box * 30), (255, 255, 255))
+            box_draw = ImageDraw.Draw(box_img)
+            for local_y, y in enumerate(range(start_y, end_y + 1)):
+                for local_x, x in enumerate(range(start_x, end_x + 1)):
+                    color = px[x, y]
+                    is_center = (x == active_x and y == active_y)
+                    border = (255, 0, 0) if is_center else (180, 180, 180)
+                    box_draw.rectangle([local_x * 30, local_y * 30, (local_x + 1) * 30 - 1, (local_y + 1) * 30 - 1], fill=color, outline=border, width=3 if is_center else 1)
+            st.image(box_img)
+            
+            st.markdown("---")
+            color_scope = st.radio("选用色彩库作用域", ["当前画布已用色", "MARD 221 全库"], horizontal=True)
+            target_mid_list = [item['色号'] for item in beads_data] if color_scope == "当前画布已用色" else list(MARD_221.keys())
+
+            cols_per_row = 8 
+            for i in range(0, len(target_mid_list), cols_per_row):
+                batch = target_mid_list[i:i + cols_per_row]
+                btn_cols = st.columns(cols_per_row)
+                for j, mid in enumerate(batch):
+                    rgb = MARD_221[mid]
+                    color_hex = '#%02x%02x%02x' % rgb
+                    with btn_cols[j]:
+                        st.markdown(f'<div style="background-color:{color_hex}; width:24px; height:24px; border-radius:4px; border:1.5px solid #666; display:inline-block; vertical-align:middle;"></div> <span style="font-size:14px; font-weight:bold;">{mid}</span>', unsafe_allow_html=True)
+                        if st.button(f"替换", key=f"btn_{mid}_{i}_{j}"):
+                            st.session_state.modified_pixels[(active_x, active_y)] = mid
+                            st.rerun()
+
+            if st.session_state.modified_pixels:
+                if st.button("🧹 一键重置所有手动修改"):
+                    st.session_state.modified_pixels = {}
+                    st.rerun()
+        
+        st.divider()
+        
+        # --- 🚀 核心修改：内存级导出功能（支持手机下载） ---
+        list_height = 80 + (len(beads_data) // 4 + 1) * 40
+        final_export = Image.new("RGB", (res.width, res.height + list_height), (255, 255, 255))
+        final_export.paste(res, (0, 0))
+        draw_ex = ImageDraw.Draw(final_export)
+        try: font_ex = ImageFont.load_default()
+        except: font_ex = None
+        
+        y_start = res.height + 20
+        draw_ex.text((20, y_start), "Material List / 拼豆清单:", fill=(0,0,0), font=font_ex)
+        for i, item in enumerate(beads_data):
+            row, col_idx = i // 4, i % 4
+            x_pos, y_pos = 20 + col_idx * 200, y_start + 40 + row * 30
+            draw_ex.rectangle([x_pos, y_pos, x_pos + 15, y_pos + 15], fill=item['rgb'], outline=(100,100,100))
+            draw_ex.text((x_pos + 25, y_pos), f"{item['色号']}: {item['数量 (颗)']} pcs", fill=(0,0,0), font=font_ex)
+        
+        # 将图片保存到内存缓冲区
+        img_buffer = io.BytesIO()
+        final_export.save(img_buffer, format="PNG")
+        img_bytes = img_buffer.getvalue()
+
+        # 下载按钮（手机端点击会触发系统下载提示）
+        st.download_button(
+            label="🚀 点击这里下载完整资料图（带清单）",
+            data=img_bytes,
+            file_name=f"Beads_Pattern_{datetime.now().strftime('%m%d_%H%M')}.png",
+            mime="image/png",
+            help="点击后浏览器会请求保存图片，支持手机相册和电脑本地。"
+        )
+        
+    with col2:
+        st.subheader("🛒 拼豆材料清单")
+        st.dataframe(
+            df[["预览", "色号", "数量 (颗)"]], 
+            hide_index=True, 
+            use_container_width=True,
+            column_config={
+                "预览": st.column_config.ImageColumn("预览", width="small"),
+                "色号": "色号",
+                "数量 (颗)": "数量"
+            }
+        )
+        st.metric("总计消耗拼豆", f"{sum(inventory.values())} 颗")
+
+else:
+    st.info("👋 欢迎使用 MARD 221 拼豆专家系统！请先在左侧上传图片。")
+st.divider()
+st.caption("MARD 221 Expert System v2.6 | 网页/手机适配下载版")
